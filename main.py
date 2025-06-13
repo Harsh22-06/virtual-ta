@@ -5,6 +5,8 @@ import httpx
 import json
 import logging
 from urllib.parse import urlparse
+from dotenv import load_dotenv
+import os
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -12,10 +14,14 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+# Load environment variables
+load_dotenv()
+
 with open("scraped_data.json", "r", encoding="utf-8") as f:
     SCRAPED_DATA = json.load(f)
 
-AI_PIPE_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6IjI0ZjIwMDIzMDFAZHMuc3R1ZHkuaWl0bS5hYy5pbiJ9.ITIOceD3QhhMCP3IB3mZoJI5zFKnlhoXtVFgPrk-d_E"
+# Replace hardcoded values
+AI_PIPE_TOKEN = os.getenv('AI_PIPE_TOKEN')
 AI_PIPE_API_URL = "https://aipipe.org/openrouter/v1/chat/completions"
 
 # Define the response model
