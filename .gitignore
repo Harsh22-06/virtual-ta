@@ -1,0 +1,22 @@
+# Environment variables and sensitive data
+.env
+auth.json
+scraped_data.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+.venv/
+ENV/
+
+# VS Code
+.vscode/
+
+# System files
+.DS_Store
+Thumbs.db
