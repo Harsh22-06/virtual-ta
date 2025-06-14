@@ -1,11 +1,11 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Tuple
 import httpx
 import json
 import logging
 from urllib.parse import urlparse
-from dotenv import load_dotenv
 import os
 import re
 from collections import defaultdict
@@ -15,15 +15,27 @@ import math
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Create FastAPI app instance
 app = FastAPI()
 
-# Load environment variables
-load_dotenv()
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-with open("scraped_data.json", "r", encoding="utf-8") as f:
+# Load your scraped data (adjust path for Vercel structure)
+current_dir = os.path.dirname(__file__)
+parent_dir = os.path.dirname(current_dir)
+scraped_data_path = os.path.join(parent_dir, "scraped_data.json")
+
+with open(scraped_data_path, "r", encoding="utf-8") as f:
     SCRAPED_DATA = json.load(f)
 
-# Replace hardcoded values
+# Get environment variables
 AI_PIPE_TOKEN = os.getenv('AI_PIPE_TOKEN')
 AI_PIPE_API_URL = "https://aipipe.org/openrouter/v1/chat/completions"
 
@@ -255,6 +267,18 @@ def create_link(url: str, title: str = None) -> Link:
         logger.error(f"Error creating link object - URL: {url}, Title: {title}, Error: {str(e)}")
         return None
 
+# Add root endpoint
+@app.get("/")
+async def root():
+    return {
+        "message": "Virtual TA API is running",
+        "status": "healthy",
+        "endpoints": {
+            "submit": "/submit",
+            "docs": "/docs"
+        }
+    }
+
 @app.post("/submit", response_model=Response)
 async def submit_string(item: Item):
     try:
@@ -374,15 +398,15 @@ async def submit_string(item: Item):
                 "messages": [
                     {
                         "role": "user", 
-                        "content": f"""You are a helpful teaching assistant for a Data Science course. Answer this question with detail and accuracy: '{item.question}'
+                        "content": f"""You are a helpful teaching assistant for a Data Science course. Answer this question concisely and accurately: '{item.question}'
 
 Use the provided context to give specific, actionable answers. If the context contains exact information, use it. If not, provide practical guidance.
 
 Context: {context[:4000]}
 
 Instructions:
-- Keep answer length upto 6 sentences
-- Answer in detail using the full context.
+- Keep answers to 2-3 sentences
+- Be specific and direct
 - Include exact details when available (like specific numbers, dates, or procedures)
 - Use markdown formatting for readability
 - If you don't know something specific, say so clearly"""
