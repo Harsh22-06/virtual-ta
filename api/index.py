@@ -394,22 +394,22 @@ async def submit_string(item: Item):
         try:
             headers = {"Authorization": f"Bearer {AI_PIPE_TOKEN}"}
             payload = {
-                "model": "google/gemini-2.0-flash-lite-001",
-                "messages": [
-                    {
-                        "role": "user", 
-                        "content": f"""You are a helpful teaching assistant for a Data Science course. Answer this question concisely and accurately: '{item.question}'
-
-Use the provided context to give specific, actionable answers. If the context contains exact information, use it. If not, provide practical guidance.
+    "model": "google/gemini-2.0-flash-lite-001",
+    "messages": [
+        {
+            "role": "user", 
+            "content": f"""You are a helpful teaching assistant for a Data Science course. Answer this question comprehensively: '{item.question}'
 
 Context: {context[:4000]}
 
 Instructions:
-- Keep answers to 2-3 sentences
-- Be specific and direct
-- Include exact details when available (like specific numbers, dates, or procedures)
-- Use markdown formatting for readability
-- If you don't know something specific, say so clearly"""
+- Give complete answers that address the question plus relevant alternatives
+- Mention related tools/options when discussing one specific tool
+- Include specific details from context (numbers, dates, procedures)
+- Structure in 3-4 sentences with technical depth
+- Example: If asked "Can I use Docker?", explain yes/no AND mention Podman, differences, and when to use each
+
+Be comprehensive but concise."""
                     } 
                 ]
             }
