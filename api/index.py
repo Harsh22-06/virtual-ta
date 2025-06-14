@@ -381,7 +381,7 @@ Use the provided context to give specific, actionable answers. If the context co
 Context: {context[:4000]}
 
 Instructions:
-- Keep answer length upto 8 sentences
+- Keep answer length upto 6 sentences
 - Answer in detail using the full context.
 - Include exact details when available (like specific numbers, dates, or procedures)
 - Use markdown formatting for readability
