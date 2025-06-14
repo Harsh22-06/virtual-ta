@@ -409,14 +409,13 @@ async def submit_string(item: Item):
                         "role": "user", 
                         "content": f"""You are a helpful teaching assistant for a Data Science course. Answer this question comprehensively: '{item.question}'
 
-Context: {context[:4000]}
+Context: {context[:8000]}
 
 Instructions:
-- Give complete answers that address the question plus relevant alternatives
+- Give complete answers that address the question plus other relevant details
 - Mention related tools/options when discussing one specific tool
 - Include specific details from context (numbers, dates, procedures)
 - Structure in 3-4 sentences with technical depth
-- Example: If asked "Can I use Docker?", explain yes/no AND mention Podman, differences, and when to use each
 
 Be comprehensive but concise."""
                     } 
