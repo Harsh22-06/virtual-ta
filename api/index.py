@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Tuple
@@ -112,7 +112,7 @@ class SearchEngine:
         
         return dict(index)
     
-    def search_discourse_topics(self, query: str, max_results: int = 3) -> List[Tuple[str, float]]:
+    def search_discourse_topics(self, query: str, max_results: int = 4) -> List[Tuple[str, float]]:
         """Search discourse topics using TF-IDF scoring with enhanced model matching"""
         query_words = self._tokenize(query)
         if not query_words:
@@ -214,9 +214,9 @@ class SearchEngine:
             if score > 0:
                 matches.append((topic, score))
         
-        # Sort by score and return topic names
+        # Sort by score and return MORE topic names (increased from 3 to 5)
         matches.sort(key=lambda x: x[1], reverse=True)
-        return [match[0] for match in matches[:3]]
+        return [match[0] for match in matches[:5]]
 
 def get_topic_title(topic: str) -> str:
     """Generate readable titles for TDS topics"""
@@ -267,12 +267,13 @@ def create_link(url: str, title: str = None) -> Link:
         logger.error(f"Error creating link object - URL: {url}, Title: {title}, Error: {str(e)}")
         return None
 
-# Add root endpoint
-@app.get("/")
-async def root():
+# Add root endpoint that handles multiple HTTP methods
+@app.api_route("/", methods=["GET", "POST", "PUT", "DELETE"])
+async def root(request: Request):
     return {
         "message": "Virtual TA API is running",
         "status": "healthy",
+        "method": request.method,
         "endpoints": {
             "submit": "/submit",
             "docs": "/docs"
@@ -301,8 +302,8 @@ async def submit_string(item: Item):
                         if any(term in title or term in body for term in ['ga5', 'gpt', 'clarification', 'model']):
                             logger.info(f"Found related topic: {topic_id} - {content.get('title', '')}")
         
-        # Search discourse topics using improved search
-        discourse_results = search_engine.search_discourse_topics(item.question, max_results=2)
+        # Search discourse topics using improved search - INCREASED FROM 2 TO 4
+        discourse_results = search_engine.search_discourse_topics(item.question, max_results=4)
         
         for topic_id, score in discourse_results:
             try:
@@ -325,7 +326,7 @@ async def submit_string(item: Item):
                 continue
         
         # Force include expected discourse link for model-related questions if not found
-        if any(term in item.question.lower() for term in ['gpt-3.5-turbo', 'gpt-4o-mini', 'ga5']) and len(links) == 0:
+        if any(term in item.question.lower() for term in ['gpt-3.5-turbo', 'gpt-4o-mini', 'ga5']) and len([l for l in links if 'ga5' in l.url.lower()]) == 0:
             expected_url = "https://discourse.onlinedegree.iitm.ac.in/t/ga5-question-8-clarification/155939"
             expected_title = "GA5 Question 8 Clarification"
             
@@ -337,12 +338,11 @@ async def submit_string(item: Item):
                     links.insert(0, forced_link)  # Add at the beginning
                     logger.info(f"Force-added expected discourse link for model question")
         
-        # Search non-discourse topics - ALWAYS include TDS links
+        # Search non-discourse topics - REMOVED TOTAL LINK LIMIT
         non_discourse_matches = search_engine.fuzzy_match_non_discourse(item.question)
         
         for topic in non_discourse_matches:
-            if len(links) >= 3:  # Limit total links
-                break
+            # REMOVED: if len(links) >= 3: break  # This was limiting total links
                 
             try:
                 content = SCRAPED_DATA[topic]
@@ -372,33 +372,42 @@ async def submit_string(item: Item):
                                 topic_id = parts[i+2]
                                 break
                         
-                        if topic_id and len(links) < 3:  # Only add if we have space
+                        # REMOVED LINK COUNT LIMIT: if topic_id and len(links) < 3:
+                        if topic_id:
                             discourse_key = f"discourse/{topic_id}"
                             if discourse_key in SCRAPED_DATA:
                                 discourse_title = SCRAPED_DATA[discourse_key]["title"]
                                 discourse_link = create_link(url=extracted_url, title=discourse_title)
                                 if discourse_link:
-                                    links.append(discourse_link)
-                                    logger.info(f"Added embedded discourse link: {extracted_url}")
+                                    # Check for duplicates before adding
+                                    existing_urls = [link.url for link in links]
+                                    if extracted_url not in existing_urls:
+                                        links.append(discourse_link)
+                                        logger.info(f"Added embedded discourse link: {extracted_url}")
                             else:
                                 discourse_link = create_link(url=extracted_url)
                                 if discourse_link:
-                                    links.append(discourse_link)
+                                    existing_urls = [link.url for link in links]
+                                    if extracted_url not in existing_urls:
+                                        links.append(discourse_link)
                         break
                         
             except Exception as e:
                 logger.error(f"Error processing non-discourse topic {topic}: {str(e)}")
                 continue
 
+        # Optional: Add final limit if you want to cap total links (e.g., max 8)
+        # links = links[:8]
+
         # Process matched content with AI
         try:
             headers = {"Authorization": f"Bearer {AI_PIPE_TOKEN}"}
             payload = {
-    "model": "google/gemini-2.0-flash-lite-001",
-    "messages": [
-        {
-            "role": "user", 
-            "content": f"""You are a helpful teaching assistant for a Data Science course. Answer this question comprehensively: '{item.question}'
+                "model": "google/gemini-2.0-flash-lite-001",
+                "messages": [
+                    {
+                        "role": "user", 
+                        "content": f"""You are a helpful teaching assistant for a Data Science course. Answer this question comprehensively: '{item.question}'
 
 Context: {context[:4000]}
 
