@@ -412,10 +412,11 @@ async def submit_string(item: Item):
 Context: {context[:8000]}
 
 Instructions:
-- Give complete answers that address the question plus other relevant details
-- Mention related tools/options when discussing one specific tool
+- Give complete answers that address the question directly plus other relevant details
+- Mention related tools/options when discussing one specific tool, but consider the context when recommending one.
 - Include specific details from context (numbers, dates, procedures)
 - Structure in 3-4 sentences with technical depth
+-
 
 Be comprehensive but concise."""
                     } 
